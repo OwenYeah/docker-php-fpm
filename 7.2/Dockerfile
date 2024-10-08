@@ -194,3 +194,7 @@ RUN echo '#!/bin/bash' > /healthcheck && \
 
 # Clean up
 RUN apt-get remove -y git && apt-get autoremove -y && apt-get clean && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
+
+WORKDIR /var/www/html
+
+CMD ["sh", "-c", "php-fpm & apache2ctl -D FOREGROUND"]
