@@ -152,13 +152,16 @@ RUN echo '<VirtualHost *:80>\n\
     </Directory>\n\
 \n\
     <FilesMatch \.php$>\n\
-        SetHandler "proxy:unix:/var/run/php-fpm.sock|fcgi://localhost/"\n\
+        SetHandler "proxy:fcgi://127.0.0.1:9000"\n\
     </FilesMatch>\n\
 \n\
 </VirtualHost>' > /etc/apache2/conf-available/php-fpm.conf
 
 # Enable PHP-FPM configuration
 RUN a2enconf php-fpm
+RUN a2enmod proxy && \
+  a2enmod proxy_fcgi && \
+  a2enmod actions
 
 # Set default work directory
 ADD scripts/* /usr/local/bin/
