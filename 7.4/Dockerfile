@@ -14,7 +14,7 @@ RUN apt-get install -y --no-install-recommends \
 	zlib1g-dev libicu-dev g++ \
 	libldap2-dev libbz2-dev \
 	curl libcurl4-openssl-dev \
-	libenchant-dev libgmp-dev firebird-dev libib-util \
+	libgmp-dev firebird-dev libib-util \
 	re2c libpng++-dev \
 	libwebp-dev libjpeg-dev libjpeg62-turbo-dev libpng-dev libxpm-dev libvpx-dev libfreetype6-dev \
 	libmagick++-dev \
@@ -36,12 +36,11 @@ RUN ln -s /usr/lib/x86_64-linux-gnu/libsybdb.so /usr/lib/
 RUN docker-php-ext-configure imap --with-kerberos --with-imap-ssl && \
 	docker-php-ext-install imap iconv
 
-RUN docker-php-ext-install bcmath bz2 calendar ctype curl dba dom enchant
+RUN docker-php-ext-install bcmath bz2 calendar ctype curl dba dom
 RUN docker-php-ext-install fileinfo exif ftp gettext gmp
 RUN docker-php-ext-install intl json ldap mbstring mysqli
 RUN docker-php-ext-install opcache pcntl pspell
 RUN docker-php-ext-install pdo pdo_dblib pdo_mysql pdo_pgsql pdo_sqlite pgsql phar posix
-RUN docker-php-ext-install readline
 RUN docker-php-ext-install session shmop simplexml soap sockets sodium
 RUN docker-php-ext-install sysvmsg sysvsem sysvshm
 # RUN docker-php-ext-install snmp
