@@ -148,6 +148,29 @@ RUN export NEW_RELIC_AGENT_VERSION=10.11.0.3 \
 	&& /tmp/newrelic-php5-${NEW_RELIC_AGENT_VERSION}-linux/newrelic-install install \
 	&& rm -rf /tmp/newrelic-php5-* /tmp/nrinstall*
 
+# Install Apache with FPM enabled
+RUN apt-get update && apt-get install -y apache2 libapache2-mod-fcgid
+RUN a2enmod rewrite proxy proxy_fcgi setenvif
+
+# Echo the PHP-FPM configuration into the file using a Here Document with line continuation
+RUN echo '<VirtualHost *:80>\n\
+    DocumentRoot /var/www/html\n\
+\n\
+    <Directory /var/www/html>\n\
+        Options Indexes FollowSymLinks\n\
+        AllowOverride All\n\
+        Require all granted\n\
+    </Directory>\n\
+\n\
+    <FilesMatch \.php$>\n\
+        SetHandler "proxy:unix:/var/run/php-fpm.sock|fcgi://localhost/"\n\
+    </FilesMatch>\n\
+\n\
+</VirtualHost>' > /etc/apache2/conf-available/php-fpm.conf
+
+# Enable PHP-FPM configuration
+RUN a2enconf php-fpm
+
 # Set default work directory
 ADD scripts/* /usr/local/bin/
 RUN chmod +x  /usr/local/bin/*
@@ -164,4 +187,6 @@ RUN echo '#!/bin/bash' > /healthcheck && \
 # Clean up
 RUN apt-get remove -y git && apt-get autoremove -y && apt-get clean && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
 
-WORKDIR /
+WORKDIR /var/www/html
+
+CMD ["sh", "-c", "php-fpm & apache2ctl -D FOREGROUND"]
