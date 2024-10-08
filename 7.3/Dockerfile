@@ -14,7 +14,7 @@ RUN apt-get install -y --no-install-recommends \
 	zlib1g-dev libicu-dev g++ \
 	libldap2-dev libbz2-dev \
 	curl libcurl4-openssl-dev \
-	libenchant-dev libgmp-dev firebird-dev libib-util \
+	libgmp-dev firebird-dev libib-util \
 	re2c libpng++-dev \
 	libwebp-dev libjpeg-dev libjpeg62-turbo-dev libpng-dev libxpm-dev libvpx-dev libfreetype6-dev \
 	libmagick++-dev \
@@ -36,12 +36,12 @@ RUN docker-php-ext-configure hash --with-mhash && \
 RUN docker-php-ext-configure imap --with-kerberos --with-imap-ssl && \
 	docker-php-ext-install imap iconv
 
-RUN docker-php-ext-install bcmath bz2 calendar ctype curl dba dom enchant
+RUN docker-php-ext-install bcmath bz2 calendar ctype curl dba dom
 RUN docker-php-ext-install fileinfo exif ftp gettext gmp
 RUN docker-php-ext-install interbase intl json ldap mbstring mysqli
 RUN docker-php-ext-install opcache pcntl pspell
 RUN docker-php-ext-install pdo pdo_dblib pdo_mysql pdo_pgsql pdo_sqlite pgsql phar posix
-RUN docker-php-ext-install readline recode
+RUN docker-php-ext-install recode
 RUN docker-php-ext-install session shmop simplexml soap sockets sodium
 RUN docker-php-ext-install sysvmsg sysvsem sysvshm
 # RUN docker-php-ext-install snmp
@@ -136,6 +136,32 @@ RUN echo 'deb http://apt.newrelic.com/debian/ newrelic non-free' | tee /etc/apt/
 RUN echo "postfix postfix/mailname string localhost" | debconf-set-selections && \
 	echo "postfix postfix/main_mailer_type string 'Internet Site'" | debconf-set-selections && \
 	DEBIAN_FRONTEND=noninteractive apt-get install postfix libsasl2-modules -y
+
+# Install Apache with FPM enabled
+RUN apt-get update && apt-get install -y apache2 libapache2-mod-fcgid
+RUN a2enmod rewrite proxy proxy_fcgi setenvif
+
+# Echo the PHP-FPM configuration into the file using a Here Document with line continuation
+RUN echo '<VirtualHost *:80>\n\
+    DocumentRoot /var/www/html\n\
+\n\
+    <Directory /var/www/html>\n\
+        Options Indexes FollowSymLinks\n\
+        AllowOverride All\n\
+        Require all granted\n\
+    </Directory>\n\
+\n\
+    <FilesMatch \.php$>\n\
+        SetHandler "proxy:fcgi://127.0.0.1:9000"\n\
+    </FilesMatch>\n\
+\n\
+</VirtualHost>' > /etc/apache2/conf-available/php-fpm.conf
+
+# Enable PHP-FPM configuration
+RUN a2enconf php-fpm
+RUN a2enmod proxy && \
+  a2enmod proxy_fcgi && \
+  a2enmod actions
 
 # Set default work directory
 ADD scripts/* /usr/local/bin/
