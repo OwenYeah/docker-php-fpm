@@ -97,6 +97,7 @@ RUN pecl install igbinary && docker-php-ext-enable igbinary
 RUN pecl install mongodb && docker-php-ext-enable mongodb
 RUN pecl install apcu && docker-php-ext-enable apcu --ini-name docker-php-ext-10-apcu.ini
 RUN yes "" | pecl install msgpack && docker-php-ext-enable msgpack
+RUN pecl install redis && docker-php-ext-enable redis
 
 # install xdebug
 # RUN pecl install xdebug && docker-php-ext-enable xdebug
