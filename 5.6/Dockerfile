@@ -1,11 +1,17 @@
 FROM php:5.6-fpm
 
-MAINTAINER Mark Hilton <nerd305@gmail.com>
+LABEL maintainer="Dreamover Studio <serveradmin@dreamover-studio.com>"
+
+# Update sources.list to use archived repositories and disable signature checking
+RUN echo "deb [trusted=yes] http://archive.debian.org/debian stretch main" > /etc/apt/sources.list && \
+    echo "deb [trusted=yes] http://archive.debian.org/debian-security stretch/updates main" >> /etc/apt/sources.list && \
+    echo "Acquire::Check-Valid-Until false;" > /etc/apt/apt.conf.d/99no-check-valid-until && \
+    echo "APT::Get::AllowUnauthenticated true;" > /etc/apt/apt.conf.d/99allow-unauth
 
 # Install PHP extensions
 RUN DEBIAN_FRONTEND=noninteractive apt-get update -q && \
     DEBIAN_FRONTEND=noninteractive apt-get install -y \
-        nano openssl libldb-dev libtidy-dev libgmp-dev unixODBC-dev \
+        nano openssl libssl-dev libldb-dev libtidy-dev libgmp-dev unixodbc-dev \
         libicu-dev \
         libmcrypt-dev \
         libcurl4-openssl-dev \
@@ -15,12 +21,15 @@ RUN DEBIAN_FRONTEND=noninteractive apt-get update -q && \
         libxslt1-dev \
         libfreetype6-dev \
         libjpeg62-turbo-dev \
-        libpng12-dev \
+        libpng-dev \
         zlib1g-dev \
         libgmp3-dev \
         libbz2-dev \
         libgmp-dev \
-        libgmp3-dev
+        libgmp3-dev \
+        build-essential \
+        autoconf \
+        pkg-config
 
 # imagic
 RUN apt-get install -y libmagickwand-6.q16-dev --no-install-recommends \
@@ -51,7 +60,7 @@ RUN docker-php-ext-configure xsl \
 #    && docker-php-ext-enable odbc \
 
 # mhash
-RUN apt-get install -y libmhash2 libmhash-dev php5-mhash && \
+RUN apt-get install -y libmhash2 libmhash-dev && \
     cd /usr/src/ && \
     curl -O -L https://downloads.sourceforge.net/project/mhash/mhash/0.9.9.9/mhash-0.9.9.9.tar.gz && \
     tar xzf mhash-0.9.9.9.tar.gz && \
@@ -63,43 +72,22 @@ RUN docker-php-ext-configure hash --with-mhash=/usr/src/mhash-0.9.9.9/include/ &
     docker-php-ext-install hash
 
 # Igbinary module
-RUN pecl install igbinary \
+RUN pecl install igbinary-2.0.8 \
     && docker-php-ext-enable igbinary
 
-RUN pecl install -o -f redis && \
+RUN pecl install redis-4.3.0 && \
 	docker-php-ext-enable redis
 
 RUN pecl install apcu-4.0.10 && \
     docker-php-ext-enable apcu
 
 RUN apt-get install -y libmemcached-dev \
-    && pecl install memcache \
+    && pecl install memcache-3.0.8 \
     && pecl install memcached-2.2.0 \
     && docker-php-ext-enable memcache memcached
 
-RUN curl -fsSL 'https://xcache.lighttpd.net/pub/Releases/3.2.0/xcache-3.2.0.tar.gz' -o xcache.tar.gz \
-    && mkdir -p xcache \
-    && tar -xf xcache.tar.gz -C xcache --strip-components=1 \
-    && rm xcache.tar.gz \
-    && ( \
-        cd xcache \
-        && phpize \
-        && ./configure --enable-xcache \
-        && make -j$(nproc) \
-        && make install \
-    ) \
-    && rm -r xcache \
-    && docker-php-ext-enable xcache
-
 # composer
-RUN RUN curl -sS https://getcomposer.org/installer | php -- --install-dir=/usr/bin/ --filename=composer
-
-# install NewRelic agent
-RUN echo 'deb http://apt.newrelic.com/debian/ newrelic non-free' | tee /etc/apt/sources.list.d/newrelic.list && \
-    curl https://download.newrelic.com/548C16BF.gpg | apt-key add - && \
-    apt-get -y update && \
-    DEBIAN_FRONTEND=noninteractive apt-get -y install newrelic-php5 newrelic-sysmond && \
-    export NR_INSTALL_SILENT=1 && newrelic-install install
+RUN curl -sS https://getcomposer.org/installer | php -- --install-dir=/usr/bin/ --filename=composer
 
 # Install required libraries
 RUN apt-get -y install libfcgi0ldbl git mysql-client cron redis-tools
@@ -114,9 +102,9 @@ RUN curl -s -L https://raw.github.com/colinmollenhour/modman/master/modman-insta
     mv ~/bin/modman /usr/sbin/
 
 # install composer
-ENV COMPOSER_HOME /tmp
-ENV COMPOSER_VERSION 1.5.2
-ENV COMPOSER_ALLOW_SUPERUSER 1
+ENV COMPOSER_HOME=/tmp
+ENV COMPOSER_VERSION=1.5.2
+ENV COMPOSER_ALLOW_SUPERUSER=1
 
 RUN curl -s -f -L -o /tmp/installer.php https://raw.githubusercontent.com/composer/getcomposer.org/da290238de6d63faace0343efbdd5aa9354332c5/web/installer \
  && php -r " \
@@ -131,19 +119,13 @@ RUN curl -s -f -L -o /tmp/installer.php https://raw.githubusercontent.com/compos
  && composer --ansi --version --no-interaction \
  && rm -rf /tmp/* /tmp/.htaccess
 
-# install recommended redis extension
-RUN cd /usr/src && \
-    git clone https://github.com/phpredis/phpredis.git && \
-    cd /usr/src/phpredis && phpize && \
-    ./configure --enable-redis-igbinary && \
-    make && make install
-
 # install blackfire.io profiler
 RUN version=$(php -r "echo PHP_MAJOR_VERSION.PHP_MINOR_VERSION;") \
     && curl -A "Docker" -o /tmp/blackfire-probe.tar.gz -D - -L -s https://blackfire.io/api/v1/releases/probe/php/linux/amd64/$version \
     && tar zxpf /tmp/blackfire-probe.tar.gz -C /tmp \
     && mv /tmp/blackfire-*.so $(php -r "echo ini_get('extension_dir');")/blackfire.so \
     && printf "extension=blackfire.so\nblackfire.agent_socket=tcp://blackfire:8707\n" > $PHP_INI_DIR/conf.d/blackfire.ini
+
 
 # cache
 RUN echo 5
