@@ -1,5 +1,11 @@
 FROM php:7.0-fpm
 
+# Update sources.list to use archived repositories and disable signature checking
+RUN echo "deb [trusted=yes] http://archive.debian.org/debian stretch main" > /etc/apt/sources.list && \
+    echo "deb [trusted=yes] http://archive.debian.org/debian-security stretch/updates main" >> /etc/apt/sources.list && \
+    echo "Acquire::Check-Valid-Until false;" > /etc/apt/apt.conf.d/99no-check-valid-until && \
+    echo "APT::Get::AllowUnauthenticated true;" > /etc/apt/apt.conf.d/99allow-unauth
+
 RUN apt-get update && apt-get upgrade -y && \
    apt-get install -y --no-install-recommends \
    git \
@@ -27,12 +33,12 @@ RUN apt-get update -yqq && \
    docker-php-ext-install soap
 
 # install Php Redis Extension
-RUN pecl install -o -f redis \
+RUN pecl install -o -f redis-4.3.0 \
    &&  rm -rf /tmp/pear \
    &&  docker-php-ext-enable redis
 
-# install the mongodb extension
-RUN pecl install mongodb && docker-php-ext-enable mongodb
+# install the mongodb extension - use older version for PHP 7.0
+RUN pecl install mongodb-1.5.5 && docker-php-ext-enable mongodb
 
 # install bcmath, mbstring and zip extensions
 RUN docker-php-ext-install bcmath && \
@@ -81,7 +87,7 @@ RUN apt-get install -y curl libcurl4-openssl-dev --no-install-recommends && \
    docker-php-ext-install curl
 
 # data structures extension
-RUN pecl install ds && \
+RUN pecl install ds-1.2.9 && \
    docker-php-ext-enable ds
 
 # imagick
@@ -181,9 +187,9 @@ RUN docker-php-ext-configure hash --with-mhash && \
 # Opcache
 RUN docker-php-ext-install opcache
 
-# install APCu
-RUN pecl install apcu-5.1.8 && \
-   pecl install apcu_bc-1.0.3 && \
+# install APCu - use available versions for PHP 7.0
+RUN pecl install apcu-5.1.21 && \
+   pecl install apcu_bc-1.0.5 && \
    docker-php-ext-enable apcu --ini-name 10-docker-php-ext-apcu.ini && \
    docker-php-ext-enable apc --ini-name 20-docker-php-ext-apc.ini
 
@@ -224,16 +230,47 @@ RUN echo "postfix postfix/mailname string localhost" | debconf-set-selections &&
    echo "postfix postfix/main_mailer_type string 'Internet Site'" | debconf-set-selections && \
    DEBIAN_FRONTEND=noninteractive apt-get install postfix libsasl2-modules -y
 
+# Install Apache with FPM enabled
+RUN apt-get update && apt-get install -y apache2 libapache2-mod-fcgid
+RUN a2enmod rewrite proxy proxy_fcgi setenvif
+
+# Echo the PHP-FPM configuration into the file using a Here Document with line continuation
+RUN echo '<VirtualHost *:80>\n\
+    DocumentRoot /var/www/html\n\
+\n\
+    <Directory /var/www/html>\n\
+        Options Indexes FollowSymLinks\n\
+        AllowOverride All\n\
+        Require all granted\n\
+    </Directory>\n\
+\n\
+    <FilesMatch \.php$>\n\
+        SetHandler "proxy:fcgi://127.0.0.1:9000"\n\
+    </FilesMatch>\n\
+\n\
+</VirtualHost>' > /etc/apache2/conf-available/php-fpm.conf
+
+# Enable PHP-FPM configuration
+RUN a2enconf php-fpm
+RUN a2enmod proxy && \
+  a2enmod proxy_fcgi && \
+  a2enmod actions
+
 # Set default work directory
 ADD scripts/* /usr/local/bin/
 RUN chmod +x  /usr/local/bin/*
 
+# Add default configuration files
+ADD configs/php.ini /usr/local/etc/php/
+ADD configs/www.conf /usr/local/etc/php-fpm.d/
+
 # Health check
 RUN echo '#!/bin/bash' > /healthcheck && \
-   echo 'SCRIPT_NAME=/health SCRIPT_FILENAME=/health REQUEST_METHOD=GET cgi-fcgi -bind -connect 127.0.0.1:9000 || exit 1' >> /healthcheck && \
-   chmod +x /healthcheck
+	echo 'env -i SCRIPT_NAME=/health SCRIPT_FILENAME=/health REQUEST_METHOD=GET cgi-fcgi -bind -connect 127.0.0.1:9000 || exit 1' >> /healthcheck && \
+	chmod +x /healthcheck
 
-# Clean up
 RUN apt-get remove -y git && apt-get autoremove -y && apt-get clean && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
 
-WORKDIR /
+WORKDIR /var/www/html
+
+CMD ["sh", "-c", "php-fpm & apache2ctl -D FOREGROUND"]

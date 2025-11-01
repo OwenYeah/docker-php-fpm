@@ -1,9 +1,8 @@
-FROM php:8.2-fpm
+FROM php:8.3-fpm
 
-RUN apt-get update -y
-RUN apt-get -y install gcc make autoconf libc-dev pkg-config libzip-dev
+RUN apt-get update -y && apt-get install -y gcc make autoconf libc-dev pkg-config libzip-dev
 
-RUN apt-get install -y --no-install-recommends \
+RUN apt-get update -y && apt-get install -y --no-install-recommends \
 	git \
 	libz-dev \
 	libpq-dev \
@@ -14,16 +13,16 @@ RUN apt-get install -y --no-install-recommends \
 	libssl-dev libssl-doc libsasl2-dev \
 	curl libcurl4-openssl-dev
 
-RUN apt-get install -y --no-install-recommends \
+RUN apt-get update -y && apt-get install -y --no-install-recommends \
 	libgmp-dev firebird-dev libib-util
 
-RUN apt-get install -y --no-install-recommends \
+RUN apt-get update -y && apt-get install -y --no-install-recommends \
 	re2c libpng++-dev libwebp-dev libjpeg-dev libjpeg62-turbo-dev libpng-dev libxpm-dev libvpx-dev libfreetype6-dev
 
-RUN apt-get install -y --no-install-recommends \
+RUN apt-get update -y && apt-get install -y --no-install-recommends \
 	libmagick++-dev libmagickwand-dev
 
-RUN apt-get install -y --no-install-recommends \
+RUN apt-get update -y && apt-get install -y --no-install-recommends \
 	zlib1g-dev libgd-dev \
 	unzip libpcre2-dev \
 	sqlite3 libsqlite3-dev libxslt-dev \
