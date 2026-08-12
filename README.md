@@ -9,6 +9,7 @@ The images are no light weight. The aim is to support maximum number of features
 
 ## Supported branches and respective Dockerfile links
 
+- 8.5 [Dockerfile](https://github.com/markhilton/docker-php-fpm/blob/master/8.5/Dockerfile)
 - 8.2 [Dockerfile](https://github.com/markhilton/docker-php-fpm/blob/master/8.2/Dockerfile)
 - 8.1 [Dockerfile](https://github.com/markhilton/docker-php-fpm/blob/master/8.1/Dockerfile)
 - 8.0 [Dockerfile](https://github.com/markhilton/docker-php-fpm/blob/master/8.0/Dockerfile)
