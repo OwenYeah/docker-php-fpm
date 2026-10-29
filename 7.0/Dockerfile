@@ -264,6 +264,12 @@ RUN chmod +x  /usr/local/bin/*
 ADD configs/php.ini /usr/local/etc/php/
 ADD configs/www.conf /usr/local/etc/php-fpm.d/
 
+# Apply upstream PHP2Shell mitigations at the FPM pool level before requests are parsed.
+RUN printf '%s\n' \
+    'php_admin_value[memory_limit] = -1' \
+    'php_admin_value[session.upload_progress.enabled] = 0' \
+    >> /usr/local/etc/php-fpm.d/www.conf
+
 # Health check
 RUN echo '#!/bin/bash' > /healthcheck && \
 	echo 'env -i SCRIPT_NAME=/health SCRIPT_FILENAME=/health REQUEST_METHOD=GET cgi-fcgi -bind -connect 127.0.0.1:9000 || exit 1' >> /healthcheck && \
