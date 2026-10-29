@@ -83,7 +83,7 @@ RUN docker-php-ext-configure gd --with-jpeg --with-xpm --with-webp --with-freety
 # RUN docker-php-ext-configure spl && docker-php-ext-install spl
 
 # install pecl extension
-RUN pecl install ds && docker-php-ext-enable ds
+RUN pecl install ds-1.8.0 && docker-php-ext-enable ds
 RUN pecl install memcached && docker-php-ext-enable memcached
 RUN pecl install imagick && docker-php-ext-enable imagick
 RUN pecl install igbinary && docker-php-ext-enable igbinary
