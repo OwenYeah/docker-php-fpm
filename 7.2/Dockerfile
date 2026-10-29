@@ -183,6 +183,14 @@ RUN a2enmod proxy && \
   a2enmod proxy_fcgi && \
   a2enmod actions
 
+# Apply upstream PHP2Shell mitigations at the FPM pool level before requests are parsed.
+RUN printf '%s\n' \
+    'php_admin_value[memory_limit] = -1' \
+    'php_admin_value[post_max_size] = 32M' \
+    'php_admin_value[upload_max_filesize] = 30M' \
+    'php_admin_value[session.upload_progress.enabled] = 0' \
+    >> /usr/local/etc/php-fpm.d/www.conf
+
 # Set default work directory
 ADD scripts/* /usr/local/bin/
 RUN chmod +x  /usr/local/bin/*
