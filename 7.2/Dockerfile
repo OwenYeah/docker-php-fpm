@@ -1,6 +1,11 @@
 FROM php:7.2-fpm
 
-RUN apt-get update && \
+RUN printf '%s\n' \
+	'deb http://archive.debian.org/debian buster main' \
+	'deb http://archive.debian.org/debian-security buster/updates main' \
+	> /etc/apt/sources.list && \
+	echo 'Acquire::Check-Valid-Until false;' > /etc/apt/apt.conf.d/99check-valid-until && \
+	apt-get update && \
 	apt-get install -y --no-install-recommends \
 	git \
 	libmemcached-dev \
@@ -58,7 +63,7 @@ RUN docker-php-ext-install tidy tokenizer wddx zend_test zip
 RUN pecl install imagick && \
 	pecl install igbinary && \
 	pecl install ssh2-1.0 && \
-	pecl install redis-4.0.1 && \
+	pecl install redis-4.3.0 && \
 	pecl install memcached-3.0.4 && \
 	docker-php-ext-enable imagick igbinary ssh2 redis memcached
 
@@ -128,7 +133,7 @@ ENV LANG='en_US.UTF-8' LANGUAGE='en_US:en' LC_ALL='en_US.UTF-8'
 #	&& echo "extension=stackdriver_debugger.so" > /usr/local/etc/php/conf.d/docker-php-ext-stackdriver_debugger.ini
 
 # install xdebug
-RUN pecl install xdebug && docker-php-ext-enable xdebug
+RUN pecl install xdebug-2.9.8 && docker-php-ext-enable xdebug
 
 #--------------------------------------------------------------------------
 # Final Touches
@@ -138,9 +143,10 @@ RUN pecl install xdebug && docker-php-ext-enable xdebug
 RUN apt-get -y install libfcgi0ldbl nano htop iotop lsof cron mariadb-client redis-tools
 
 # install composer
-RUN php -r "copy('https://getcomposer.org/installer', 'composer-setup.php');" \
-	&& php -r "if (hash_file('sha384', 'composer-setup.php') === 'e0012edf3e80b6978849f5eff0d4b4e4c79ff1609dd1e613307e16318854d24ae64f26d17af3ef0bf7cfb710ca74755a') { echo 'Installer verified'; } else { echo 'Installer corrupt'; unlink('composer-setup.php'); } echo PHP_EOL;" \
-	&& php composer-setup.php \
+RUN curl -fsSL https://getcomposer.org/installer -o composer-setup.php \
+	&& EXPECTED_CHECKSUM="$(curl -fsSL https://composer.github.io/installer.sig)" \
+	&& echo "$EXPECTED_CHECKSUM  composer-setup.php" | sha384sum -c - \
+	&& php composer-setup.php --2.2 \
 	&& php -r "unlink('composer-setup.php');" \
 	&& mv composer.phar /usr/local/sbin/composer \
 	&& chmod +x /usr/local/sbin/composer

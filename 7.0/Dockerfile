@@ -226,7 +226,9 @@ RUN echo 'deb http://apt.newrelic.com/debian/ newrelic non-free' | tee /etc/apt/
    export NR_INSTALL_SILENT=1 && newrelic-install install
 
 # install SendGrid
-RUN echo "postfix postfix/mailname string localhost" | debconf-set-selections && \
+RUN mkdir -p /etc/postfix && \
+   echo "myhostname = localhost.localdomain" > /etc/postfix/main.cf && \
+   echo "postfix postfix/mailname string localhost.localdomain" | debconf-set-selections && \
    echo "postfix postfix/main_mailer_type string 'Internet Site'" | debconf-set-selections && \
    DEBIAN_FRONTEND=noninteractive apt-get install postfix libsasl2-modules -y
 
